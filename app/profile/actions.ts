@@ -2,11 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { validateAvatar } from "@/lib/avatar";
 import { createClient } from "@/lib/supabase/server";
 
 export type FormState = { error?: string; success?: string } | undefined;
-
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 async function requireUser() {
   const supabase = await createClient();
@@ -62,12 +61,8 @@ export async function updateProfile(
 
   const avatar = formData.get("avatar");
   if (avatar instanceof File && avatar.size > 0) {
-    if (!avatar.type.startsWith("image/")) {
-      return { error: "The photo must be an image file." };
-    }
-    if (avatar.size > MAX_AVATAR_BYTES) {
-      return { error: "The photo must be 5 MB or smaller." };
-    }
+    const invalid = validateAvatar(avatar);
+    if (invalid) return { error: invalid };
 
     // The image goes to Storage; only its URL is saved in the database.
     const ext = avatar.name.split(".").pop()?.toLowerCase() || "png";
