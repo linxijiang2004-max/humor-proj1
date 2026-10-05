@@ -22,6 +22,13 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link
+          href="/new"
+          className="rounded-lg border border-gray-200 p-5 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
+        >
+          <p className="font-medium">New caption →</p>
+          <p className="text-sm text-gray-500">Upload an image and get AI caption ideas.</p>
+        </Link>
+        <Link
           href="/captions"
           className="rounded-lg border border-gray-200 p-5 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
         >

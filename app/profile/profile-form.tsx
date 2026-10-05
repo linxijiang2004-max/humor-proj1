@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState, type ChangeEvent } from "react";
-import { ALLOWED_AVATAR_TYPES, validateAvatar } from "@/lib/avatar";
+import { ALLOWED_IMAGE_TYPES, validateImageFile } from "@/lib/image-upload";
 import type { Profile } from "@/lib/supabase/server";
 import { updateProfile, type FormState } from "./actions";
 
@@ -42,7 +42,7 @@ export default function ProfileForm({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const invalid = validateAvatar(file);
+    const invalid = validateImageFile(file);
     if (invalid) {
       setFileError(invalid);
       setPreview(null);
@@ -70,7 +70,7 @@ export default function ProfileForm({
           <input
             type="file"
             name="avatar"
-            accept={ALLOWED_AVATAR_TYPES.join(",")}
+            accept={ALLOWED_IMAGE_TYPES.join(",")}
             onChange={onFileChange}
             className="sr-only"
             aria-label="Change profile photo"

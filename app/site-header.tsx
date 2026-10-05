@@ -18,6 +18,9 @@ export default async function SiteHeader() {
         <div className="ml-auto flex items-center gap-4">
           {user ? (
             <>
+              <Link href="/new" className="text-gray-600 hover:underline dark:text-gray-400">
+                New caption
+              </Link>
               <Link href="/dashboard" className="text-gray-600 hover:underline dark:text-gray-400">
                 Dashboard
               </Link>

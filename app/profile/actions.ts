@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { validateAvatar } from "@/lib/avatar";
+import { fileExtension, validateImageFile } from "@/lib/image-upload";
 import { createClient } from "@/lib/supabase/server";
 
 export type FormState = { error?: string; success?: string } | undefined;
@@ -61,12 +61,11 @@ export async function updateProfile(
 
   const avatar = formData.get("avatar");
   if (avatar instanceof File && avatar.size > 0) {
-    const invalid = validateAvatar(avatar);
+    const invalid = validateImageFile(avatar);
     if (invalid) return { error: invalid };
 
     // The image goes to Storage; only its URL is saved in the database.
-    const ext = avatar.name.split(".").pop()?.toLowerCase() || "png";
-    const path = `${user.id}/avatar.${ext}`;
+    const path = `${user.id}/avatar.${fileExtension(avatar)}`;
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(path, avatar, { upsert: true, contentType: avatar.type });
