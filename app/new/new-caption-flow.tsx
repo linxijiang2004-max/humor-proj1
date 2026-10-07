@@ -16,6 +16,9 @@ import {
 
 const buttonClass =
   "rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60";
+// The two empty-state options: same size and outline so neither looks primary.
+const panelClass =
+  "flex h-56 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-gray-500 hover:text-gray-300 focus-within:border-gray-400 dark:border-gray-700";
 const secondaryButtonClass =
   "rounded-lg border border-gray-300 px-4 py-2 font-medium hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-900";
 
@@ -142,8 +145,9 @@ export default function NewCaptionFlow() {
           className="max-h-96 w-full rounded-lg border border-gray-200 object-contain dark:border-gray-800"
         />
       ) : (
-        <>
-          <label className="flex h-56 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-600 focus-within:border-blue-600 dark:border-gray-700">
+        // Two equal ways in, side by side (stacked on phones).
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className={`${panelClass} cursor-pointer`}>
             <input
               type="file"
               accept={ALLOWED_IMAGE_TYPES.join(",")}
@@ -164,15 +168,28 @@ export default function NewCaptionFlow() {
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            <span className="font-medium">Click to choose an image</span>
+            <span className="font-medium">Choose an image</span>
             <span className="text-xs">PNG, JPEG, WebP or GIF (GIFs up to 5 MB)</span>
           </label>
 
-          <form onSubmit={linkAndGenerate} className="flex flex-col gap-2">
-            <label htmlFor="image-link" className="text-sm text-gray-500">
-              Or paste an image link
+          <form onSubmit={linkAndGenerate} className={`${panelClass} px-5`}>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-8 w-8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <label htmlFor="image-link" className="font-medium">
+              Paste an image link
             </label>
-            <div className="flex gap-2">
+            <div className="flex w-full gap-2">
               <input
                 id="image-link"
                 type="url"
@@ -181,14 +198,14 @@ export default function NewCaptionFlow() {
                 value={link}
                 onChange={(event) => setLink(event.target.value)}
                 disabled={pending}
-                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-transparent"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-ink dark:border-gray-700 dark:bg-transparent"
               />
               <button type="submit" disabled={pending || !link.trim()} className={secondaryButtonClass}>
-                Use link
+                Use
               </button>
             </div>
           </form>
-        </>
+        </div>
       )}
 
       {error && (

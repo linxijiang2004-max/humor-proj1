@@ -27,9 +27,9 @@ export default function Masonry({ children }: { children: ReactNode }) {
   Children.toArray(children).forEach((child, i) => columns[i % count].push(child));
 
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-5">
       {columns.map((column, i) => (
-        <div key={i} className="flex min-w-0 flex-1 flex-col gap-4">
+        <div key={i} className="flex min-w-0 flex-1 flex-col gap-5">
           {column}
         </div>
       ))}

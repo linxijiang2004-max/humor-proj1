@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getUserAndProfile } from "@/lib/supabase/server";
 import AvatarMenu from "./_components/avatar-menu";
+import { BitMark } from "./_components/bit-mark";
 import NavLink from "./_components/nav-link";
 
 // logo | New ........ Top 100 | Favorites | Images | avatar
@@ -9,14 +10,15 @@ export default async function SiteHeader() {
 
   return (
     <header className="border-b border-gray-200 dark:border-gray-800">
-      <nav className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-1 px-4 py-2 text-sm">
-        <Link href="/" className="mr-2 whitespace-nowrap font-bold">
-          Humor Project
+      <nav className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center gap-1 px-4 py-2 text-sm">
+        <Link href="/" className="mr-2 flex items-center gap-[10px] whitespace-nowrap">
+          <BitMark />
+          <span className="font-extrabold tracking-[-0.035em]">bit</span>
         </Link>
         <NavLink href="/new">New</NavLink>
 
         <div className="ml-auto flex items-center gap-1">
-          <NavLink href="/">Top 100</NavLink>
+          <NavLink href="/?view=top">Top 100</NavLink>
           <NavLink href="/favorites">Favorites</NavLink>
           <NavLink href="/images">Images</NavLink>
           <div className="ml-2">

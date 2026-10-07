@@ -4,7 +4,7 @@ import { getUserAndProfile } from "@/lib/supabase/server";
 import ProfileForm from "./profile-form";
 
 export const metadata: Metadata = {
-  title: "Profile — Linxi Jiang",
+  title: "Profile",
 };
 
 export default async function ProfilePage() {

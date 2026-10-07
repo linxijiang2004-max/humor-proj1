@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  const active = usePathname() === href;
+  // Compares the path only: "/?view=top" is active anywhere on the feed.
+  const active = usePathname() === href.split("?")[0];
   return (
     <Link
       href={href}

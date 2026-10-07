@@ -8,12 +8,13 @@ import Popover from "./popover";
 
 const scoreFormat = new Intl.NumberFormat("en-US", { notation: "compact" });
 
+// 36px tap target around an 18px icon. Default muted, hover brightens,
+// active is the accent (filled by the icon itself).
 export function iconButtonClass(active: boolean) {
   return [
-    "rounded p-1 transition-colors focus-visible:outline-2 focus-visible:outline-gray-500",
-    active
-      ? "text-gray-900 dark:text-gray-100"
-      : "text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-900 dark:hover:text-gray-300",
+    "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+    "focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent",
+    active ? "text-accent" : "text-muted hover:bg-white/5 hover:text-ink",
   ].join(" ");
 }
 
@@ -64,7 +65,9 @@ export default function VoteControl({ captionId, vote, score, signedIn, onChange
   }
 
   return (
-    <div className="relative flex shrink-0 flex-col items-center">
+    // Negative margins align the icons, not their tap targets, with the
+    // card's top-right padding.
+    <div className="relative -mt-[9px] -mr-[9px] flex shrink-0 flex-col items-center">
       <button
         type="button"
         aria-label="Upvote"
@@ -72,14 +75,14 @@ export default function VoteControl({ captionId, vote, score, signedIn, onChange
         onClick={() => cast(1)}
         className={iconButtonClass(vote === 1)}
       >
-        <ArrowUpIcon filled={vote === 1} className="h-5 w-5" />
+        <ArrowUpIcon filled={vote === 1} className="h-[18px] w-[18px]" />
       </button>
 
       {/* Always in the layout so revealing it never moves anything; hidden
           with opacity and removed from the accessibility tree while hidden. */}
       <span
         aria-hidden={!scoreVisible}
-        className={`min-w-7 select-none text-center text-xs leading-4 tabular-nums text-gray-700 transition-opacity duration-200 ease-out motion-reduce:transition-none dark:text-gray-300 ${
+        className={`min-w-9 select-none text-center text-[15px] font-bold leading-5 tabular-nums text-ink transition-opacity duration-200 ease-out motion-reduce:transition-none ${
           scoreVisible ? "opacity-100" : "opacity-0"
         }`}
       >
@@ -94,7 +97,7 @@ export default function VoteControl({ captionId, vote, score, signedIn, onChange
         onClick={() => cast(-1)}
         className={iconButtonClass(vote === -1)}
       >
-        <ArrowDownIcon filled={vote === -1} className="h-5 w-5" />
+        <ArrowDownIcon filled={vote === -1} className="h-[18px] w-[18px]" />
       </button>
 
       {message && <Popover message={message.text} signIn={message.signIn} onClose={closeMessage} />}

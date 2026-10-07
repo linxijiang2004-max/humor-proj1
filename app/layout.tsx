@@ -14,15 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hello World — Linxi Jiang",
-  description: "Week 1 assignment for Designing for GenAI",
+  title: { default: "bit", template: "%s · bit" },
+  description: "AI-written captions, rated by Columbia students.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <SiteHeader />

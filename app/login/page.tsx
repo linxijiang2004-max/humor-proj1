@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import GoogleSignInButton from "./google-sign-in-button";
 
 export const metadata: Metadata = {
-  title: "Sign in — Linxi Jiang",
+  title: "Sign in",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {

@@ -28,7 +28,7 @@ export default function ImageFeed({
             src={image.url}
             alt=""
             loading="lazy"
-            className="block w-full rounded-lg border border-gray-200 dark:border-gray-800"
+            className="block w-full rounded-[14px] bg-card"
           />
         ))}
       </Masonry>

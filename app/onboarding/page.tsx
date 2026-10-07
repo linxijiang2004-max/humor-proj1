@@ -4,7 +4,7 @@ import { getUserAndProfile, hasFullName } from "@/lib/supabase/server";
 import OnboardingForm from "./onboarding-form";
 
 export const metadata: Metadata = {
-  title: "Welcome — Linxi Jiang",
+  title: "Welcome",
 };
 
 export default async function OnboardingPage() {

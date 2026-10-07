@@ -10,25 +10,25 @@ export function usePages<T extends { id: number }>(
   fetchPage: (offset: number) => Promise<Page<T>>,
 ) {
   const [items, setItems] = useState(initial.items);
-  const [nextOffset, setNextOffset] = useState(initial.nextOffset);
+  const [cursor, setCursor] = useState(initial.cursor);
   const [error, setError] = useState(initial.error ?? null);
   const [loading, setLoading] = useState(false);
   const loadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
-    if (loadingRef.current || nextOffset === null) return;
+    if (loadingRef.current || cursor === null) return;
     loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
-      const page = await fetchPage(nextOffset);
+      const page = await fetchPage(cursor);
       // Scores can change between pages, so a caption may show up twice.
       setItems((current) => {
         const seen = new Set(current.map((item) => item.id));
         return [...current, ...page.items.filter((item) => !seen.has(item.id))];
       });
-      setNextOffset(page.nextOffset);
+      setCursor(page.cursor);
       if (page.error) setError(page.error);
     } catch {
       setError("Couldn't load more. Check your connection and try again.");
@@ -36,11 +36,11 @@ export function usePages<T extends { id: number }>(
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [fetchPage, nextOffset]);
+  }, [fetchPage, cursor]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || nextOffset === null || error) return;
+    if (!sentinel || cursor === null || error) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) loadMore();
@@ -49,11 +49,11 @@ export function usePages<T extends { id: number }>(
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadMore, nextOffset, error]);
+  }, [loadMore, cursor, error]);
 
   const update = useCallback((id: number, patch: Partial<T>) => {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }, []);
 
-  return { items, update, hasMore: nextOffset !== null, error, loading, loadMore, sentinelRef };
+  return { items, update, hasMore: cursor !== null, error, loading, loadMore, sentinelRef };
 }

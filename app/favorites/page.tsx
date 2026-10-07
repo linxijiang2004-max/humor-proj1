@@ -5,7 +5,7 @@ import { getUserAndProfile, hasFullName } from "@/lib/supabase/server";
 import CaptionFeed from "../_components/caption-feed";
 
 export const metadata: Metadata = {
-  title: "Favorites — Linxi Jiang",
+  title: "Favorites",
 };
 
 // Members-only route: proxy.ts sends signed-out visitors to /login.
@@ -17,7 +17,7 @@ export default async function FavoritesPage() {
   const initial = await loadFavoritesPage(0);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6">
+    <main className="mx-auto w-full max-w-[1200px] px-4 py-6">
       <h1 className="mb-6 text-xl font-semibold">Favorites</h1>
       <CaptionFeed
         initial={initial}

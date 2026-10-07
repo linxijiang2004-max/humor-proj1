@@ -8,7 +8,9 @@ import {
   parseTimeframe,
   type CaptionCardData,
   type ImageCardData,
+  TOP_PICKS,
   type Page,
+  type RatingSummary,
   type Timeframe,
   type Vote,
 } from "@/lib/feed";
@@ -34,6 +36,12 @@ async function getViewer() {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, user };
+}
+
+// ISO start of the timeframe, or null for All Time.
+function timeframeStart(timeframe: unknown) {
+  const { days } = TIMEFRAMES.find((t) => t.key === parseTimeframe(timeframe))!;
+  return days ? new Date(Date.now() - days * 86_400_000).toISOString() : null;
 }
 
 function parseOffset(value: unknown, max = Number.MAX_SAFE_INTEGER) {
@@ -91,18 +99,16 @@ async function toCards(
 
 // Public captions ranked by score, capped at FEED_MAX.
 export async function loadFeedPage(timeframe: Timeframe, offset: number): Promise<Page<CaptionCardData>> {
-  const { days } = TIMEFRAMES.find((t) => t.key === parseTimeframe(timeframe))!;
+  const since = timeframeStart(timeframe);
   const start = parseOffset(offset, FEED_MAX);
   const limit = Math.min(PAGE_SIZE, FEED_MAX - start);
-  if (limit <= 0) return { items: [], nextOffset: null };
+  if (limit <= 0) return { items: [], cursor: null };
 
   const { supabase, user } = await getViewer();
 
   // RLS also returns the viewer's own drafts, so is_public must be explicit.
   let query = supabase.from("captions").select(CAPTION_COLUMNS).eq("is_public", true);
-  if (days) {
-    query = query.gte("created_at", new Date(Date.now() - days * 86_400_000).toISOString());
-  }
+  if (since) query = query.gte("created_at", since);
 
   // One extra row tells us whether another page exists. id breaks ties so
   // pages don't overlap when many captions share a score.
@@ -112,12 +118,102 @@ export async function loadFeedPage(timeframe: Timeframe, offset: number): Promis
     .range(start, start + limit)
     .overrideTypes<CaptionRow[], { merge: false }>();
 
-  if (error) return { items: [], nextOffset: null, error: `Couldn't load captions: ${error.message}` };
+  if (error) return { items: [], cursor: null, error: `Couldn't load captions: ${error.message}` };
 
   const hasMore = data.length > limit && start + limit < FEED_MAX;
   return {
     items: await toCards(supabase, user, data.slice(0, limit)),
-    nextOffset: hasMore ? start + limit : null,
+    cursor: hasMore ? start + limit : null,
+  };
+}
+
+// Public captions the viewer hasn't voted on, newest first. Their own
+// captions are left out: rating your own caption isn't meaningful.
+//
+// Paged by last-seen id rather than offset: voting removes rows from this set
+// while the user scrolls, which would make an offset skip captions. ids are
+// identity columns, so id order is creation order.
+export async function loadUnratedPage(timeframe: Timeframe, cursor: number): Promise<Page<CaptionCardData>> {
+  const before = parseOffset(cursor);
+  const since = timeframeStart(timeframe);
+  const { supabase, user } = await getViewer();
+  if (!user) return { items: [], cursor: null, error: "Sign in to rate captions." };
+
+  // Anti-join: embed the viewer's own vote and keep rows where it is missing.
+  const unrated = (columns: string, options?: { count: "exact"; head: true }) => {
+    const query = supabase
+      .from("captions")
+      .select(`${columns}, caption_votes!left(profile_id)`, options)
+      .eq("is_public", true)
+      .or(`profile_id.is.null,profile_id.neq.${user.id}`)
+      .eq("caption_votes.profile_id", user.id)
+      .is("caption_votes", null);
+    return since ? query.gte("created_at", since) : query;
+  };
+
+  let pageQuery = unrated(CAPTION_COLUMNS).order("id", { ascending: false }).limit(PAGE_SIZE + 1);
+  if (before > 0) pageQuery = pageQuery.lt("id", before);
+
+  const [page, total] = await Promise.all([
+    pageQuery.overrideTypes<CaptionRow[], { merge: false }>(),
+    before === 0 ? unrated("id", { count: "exact", head: true }) : null,
+  ]);
+
+  if (page.error) return { items: [], cursor: null, error: `Couldn't load captions: ${page.error.message}` };
+
+  const rows = page.data.slice(0, PAGE_SIZE);
+  return {
+    items: await toCards(supabase, user, rows),
+    cursor: page.data.length > PAGE_SIZE ? rows[rows.length - 1].id : null,
+    total: total?.count ?? undefined,
+  };
+}
+
+// Wrap-up for when the Unrated feed is empty.
+export async function loadRatingSummary(): Promise<RatingSummary | null> {
+  const { supabase, user } = await getViewer();
+  if (!user) return null;
+
+  const myVotes = () =>
+    supabase.from("caption_votes").select("caption_id", { count: "exact", head: true }).eq("profile_id", user.id);
+
+  const [rated, upvotes, best, top] = await Promise.all([
+    myVotes(),
+    myVotes().eq("vote_value", 1),
+    supabase
+      .from("captions")
+      .select("content, like_count, caption_votes!inner(vote_value)")
+      .eq("is_public", true)
+      .eq("caption_votes.profile_id", user.id)
+      .eq("caption_votes.vote_value", 1)
+      .order("like_count", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ content: string; like_count: number }>(),
+    // The crowd's top-rated: highest scores overall, positive scores only.
+    supabase
+      .from("captions")
+      .select("id")
+      .eq("is_public", true)
+      .gt("like_count", 0)
+      .order("like_count", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(TOP_PICKS),
+  ]);
+
+  const topIds = (top.data ?? []).map((row) => row.id as number);
+  const matches = topIds.length > 0 ? await myVotes().eq("vote_value", 1).in("caption_id", topIds) : null;
+
+  for (const result of [rated, upvotes, best, top, matches]) {
+    if (result?.error) console.error("Couldn't load rating summary", result.error.message);
+  }
+
+  return {
+    rated: rated.count ?? 0,
+    upvotes: upvotes.count ?? 0,
+    bestPick: best.data ? { content: best.data.content, score: best.data.like_count } : null,
+    topMatches: matches?.count ?? 0,
+    topSize: topIds.length,
   };
 }
 
@@ -125,7 +221,7 @@ export async function loadFeedPage(timeframe: Timeframe, offset: number): Promis
 export async function loadFavoritesPage(offset: number): Promise<Page<CaptionCardData>> {
   const start = parseOffset(offset);
   const { supabase, user } = await getViewer();
-  if (!user) return { items: [], nextOffset: null, error: "Sign in to see your favorites." };
+  if (!user) return { items: [], cursor: null, error: "Sign in to see your favorites." };
 
   const { data, error } = await supabase
     .from("caption_favorites")
@@ -136,7 +232,7 @@ export async function loadFavoritesPage(offset: number): Promise<Page<CaptionCar
     .range(start, start + PAGE_SIZE)
     .overrideTypes<{ caption_id: number; captions: (CaptionRow & { is_public: boolean }) | null }[], { merge: false }>();
 
-  if (error) return { items: [], nextOffset: null, error: `Couldn't load favorites: ${error.message}` };
+  if (error) return { items: [], cursor: null, error: `Couldn't load favorites: ${error.message}` };
 
   // A favorited caption that has since been unpublished is skipped.
   const rows = data
@@ -146,7 +242,7 @@ export async function loadFavoritesPage(offset: number): Promise<Page<CaptionCar
 
   return {
     items: await toCards(supabase, user, rows, true),
-    nextOffset: data.length > PAGE_SIZE ? start + PAGE_SIZE : null,
+    cursor: data.length > PAGE_SIZE ? start + PAGE_SIZE : null,
   };
 }
 
@@ -164,11 +260,11 @@ export async function loadImagesPage(offset: number): Promise<Page<ImageCardData
     .range(start, start + PAGE_SIZE)
     .overrideTypes<{ id: number; url: string }[], { merge: false }>();
 
-  if (error) return { items: [], nextOffset: null, error: `Couldn't load images: ${error.message}` };
+  if (error) return { items: [], cursor: null, error: `Couldn't load images: ${error.message}` };
 
   return {
     items: data.slice(0, PAGE_SIZE).map(({ id, url }) => ({ id, url })),
-    nextOffset: data.length > PAGE_SIZE ? start + PAGE_SIZE : null,
+    cursor: data.length > PAGE_SIZE ? start + PAGE_SIZE : null,
   };
 }
 

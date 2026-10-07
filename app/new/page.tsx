@@ -4,7 +4,7 @@ import { getUserAndProfile, hasFullName } from "@/lib/supabase/server";
 import NewCaptionFlow from "./new-caption-flow";
 
 export const metadata: Metadata = {
-  title: "New caption — Linxi Jiang",
+  title: "New caption",
 };
 
 // Two sequential Gemini calls can take a while; give the server action room.
