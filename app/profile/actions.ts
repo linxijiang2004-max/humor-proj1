@@ -41,7 +41,7 @@ export async function completeOnboarding(
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect("/");
 }
 
 // Used by /profile: updates names and, if a file was chosen, the photo.

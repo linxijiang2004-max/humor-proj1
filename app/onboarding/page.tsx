@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default async function OnboardingPage() {
   const { user, profile } = await getUserAndProfile();
   if (!user) redirect("/login");
-  if (hasFullName(profile)) redirect("/dashboard");
+  if (hasFullName(profile)) redirect("/");
 
   return (
     <main className="mx-auto w-full max-w-sm px-4 py-16">

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       const { profile } = await getUserAndProfile();
-      const next = hasFullName(profile) ? "/dashboard" : "/onboarding";
+      const next = hasFullName(profile) ? "/" : "/onboarding";
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
