@@ -18,6 +18,11 @@ type Props = {
   signedIn: boolean;
 };
 
+// The accent pill for "+ add yours", shared by the floating button and the
+// caught-up screen.
+const addYoursClass =
+  "whitespace-nowrap rounded-full bg-accent px-5 py-2 text-[15px] font-semibold text-page transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
 // Lets the last vote's feedback play before the feed gives way to the end.
 const END_DELAY_MS = 600;
 
@@ -84,7 +89,7 @@ export default function HomeFeed({ view, timeframe, initial, fetchPage, signedIn
       <div aria-hidden="true" className="h-16" />
       <Link
         href="/new"
-        className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-5 py-2 text-[15px] font-semibold text-page transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className={`fixed bottom-6 left-1/2 z-10 -translate-x-1/2 ${addYoursClass}`}
       >
         + add yours
       </Link>
@@ -179,16 +184,17 @@ function Segmented({
 // coming back later means there's something new.
 function CaughtUp({ voted }: { voted: number }) {
   return (
-    <section aria-live="polite" className="mx-auto flex max-w-md flex-col items-center gap-2 py-24 text-center">
+    // Centred in the space under the toolbar rather than pinned near the top.
+    <section
+      aria-live="polite"
+      className="flex min-h-[calc(100dvh-14rem)] flex-col items-center justify-center gap-2 pb-16 text-center"
+    >
       <h2 className="text-[22px] font-bold">you&apos;re caught up</h2>
       <p className="text-[15px] text-muted">
         {voted === 0 ? "nothing new to vote on" : `${voted} ${voted === 1 ? "vote" : "votes"} this session`}
       </p>
-      <Link
-        href="/new"
-        className="mt-2 text-[15px] font-semibold text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
-        add yours
+      <Link href="/new" className={`mt-5 ${addYoursClass}`}>
+        + add yours
       </Link>
     </section>
   );
