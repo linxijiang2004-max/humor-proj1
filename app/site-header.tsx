@@ -4,7 +4,7 @@ import AvatarMenu from "./_components/avatar-menu";
 import { BitMark } from "./_components/bit-mark";
 import NavLink from "./_components/nav-link";
 
-// logo | New ........ Mine | Favorites | avatar
+// logo | new ........ about | mine | favorites | avatar
 // Top lives in the feed's own tabs; /images still works but isn't linked.
 export default async function SiteHeader() {
   const { user, profile } = await getUserAndProfile();
@@ -12,7 +12,7 @@ export default async function SiteHeader() {
   return (
     <header className="border-b border-gray-200 dark:border-gray-800">
       <nav className="mx-auto flex w-full max-w-[1200px] min-h-16 flex-wrap items-center gap-1 px-3 sm:px-4 py-3 text-sm">
-        <Link href="/" className="mr-2 flex items-center gap-[10px] whitespace-nowrap">
+        <Link href="/" className="mr-1 flex items-center gap-[10px] whitespace-nowrap sm:mr-2">
           <BitMark />
           <span className="font-extrabold tracking-[-0.035em]">bit</span>
         </Link>
@@ -26,9 +26,10 @@ export default async function SiteHeader() {
         </Link>
 
         <div className="ml-auto flex items-center gap-1">
+          <NavLink href="/about">about</NavLink>
           <NavLink href="/mine">mine</NavLink>
           <NavLink href="/favorites">favorites</NavLink>
-          <div className="ml-2">
+          <div className="ml-1 sm:ml-2">
             {user ? (
               <AvatarMenu
                 name={profile?.first_name || user.email || "account"}
@@ -38,7 +39,7 @@ export default async function SiteHeader() {
             ) : (
               <Link
                 href="/login"
-                className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-1.5 font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-900"
+                className="whitespace-nowrap rounded-md border border-gray-300 px-2.5 py-1.5 sm:px-3 font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-900"
               >
                 sign in
               </Link>

@@ -12,8 +12,8 @@ export default function NavLink({ href, children }: { href: string; children: Re
       aria-current={active ? "page" : undefined}
       className={
         active
-          ? "whitespace-nowrap rounded-md px-2 py-1.5 font-medium text-gray-900 dark:text-gray-100"
-          : "whitespace-nowrap rounded-md px-2 py-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100"
+          ? "whitespace-nowrap rounded-md px-1.5 py-1.5 sm:px-2 font-medium text-gray-900 dark:text-gray-100"
+          : "whitespace-nowrap rounded-md px-1.5 py-1.5 sm:px-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100"
       }
     >
       {children}
