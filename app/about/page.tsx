@@ -19,7 +19,7 @@ const STEPS = [
   {
     icon: <span className="text-[20px] leading-none font-semibold">+</span>,
     title: "add yours",
-    line: "a photo in, four captions out",
+    line: "a meme in, four captions out",
   },
   {
     icon: <HeartIcon filled className="h-[18px] w-[18px]" />,
@@ -33,7 +33,7 @@ export default function AboutPage() {
     <main className="mx-auto w-full max-w-md px-3 py-12 sm:px-4 sm:py-16">
       <h1 className="text-3xl font-bold">what is bit?</h1>
       <p className="mt-3 text-[17px] leading-relaxed text-muted">
-        photos from around campus.
+        memes and reaction gifs.
         <br />
         ai writes the captions.
         <br />

@@ -56,8 +56,8 @@ async function storeImage(
   if (error) {
     // Don't leave an untracked file behind in Storage.
     await supabase.storage.from("images").remove([path]);
-    console.error("couldn't save the photo", error.message);
-    return { error: "couldn't save the photo" };
+    console.error("couldn't save the meme", error.message);
+    return { error: "couldn't save the meme" };
   }
 
   return { image: data };
@@ -69,7 +69,7 @@ export async function uploadImage(formData: FormData): Promise<UploadResult> {
 
   const file = formData.get("image");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "pick a photo first" };
+    return { error: "pick a meme first" };
   }
   const invalid = validateImageFile(file);
   if (invalid) return { error: invalid };
@@ -157,11 +157,11 @@ export async function generateCaptions(imageId: number): Promise<GenerateResult>
     }>();
 
   if (imageError) {
-    console.error("couldn't load the photo", imageError.message);
-    return { error: "couldn't load the photo" };
+    console.error("couldn't load the meme", imageError.message);
+    return { error: "couldn't load the meme" };
   }
   if (!image || (image.profile_id !== user.id && !image.is_library)) {
-    return { error: "photo not found" };
+    return { error: "meme not found" };
   }
 
   const steps: Step[] = [];

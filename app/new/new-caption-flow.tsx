@@ -141,7 +141,7 @@ export default function NewCaptionFlow() {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageSrc}
-          alt="your photo"
+          alt="your meme"
           className="max-h-96 w-full rounded-lg border border-gray-200 object-contain dark:border-gray-800"
         />
       ) : (
@@ -169,7 +169,7 @@ export default function NewCaptionFlow() {
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
             <span className="font-medium">upload</span>
-            <span className="text-xs">a photo from this week</span>
+            <span className="text-xs">a meme or gif</span>
           </label>
 
           <form onSubmit={linkAndGenerate} className={`${panelClass} px-5`}>
@@ -216,7 +216,7 @@ export default function NewCaptionFlow() {
 
       {status && (
         <p aria-live="polite" className="text-sm text-gray-500">
-          {status === "uploading" ? (link ? "getting the photo…" : "uploading…") : "writing captions…"}
+          {status === "uploading" ? (link ? "getting the meme…" : "uploading…") : "writing captions…"}
         </p>
       )}
 
@@ -238,7 +238,7 @@ export default function NewCaptionFlow() {
         )}
         {(file || image) && (
           <button onClick={startOver} disabled={pending} className={secondaryButtonClass}>
-            different photo
+            different meme
           </button>
         )}
       </div>

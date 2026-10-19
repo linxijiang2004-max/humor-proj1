@@ -139,11 +139,11 @@ export async function fetchImageAsPart(url: string): Promise<Part> {
   try {
     response = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: "no-store" });
   } catch {
-    throw new GeminiError("couldn't read that photo");
+    throw new GeminiError("couldn't read that meme");
   }
   const mimeType = response.headers.get("content-type")?.split(";")[0] ?? "";
   if (!response.ok || !mimeType.startsWith("image/")) {
-    throw new GeminiError("couldn't read that photo");
+    throw new GeminiError("couldn't read that meme");
   }
   const original = Buffer.from(await response.arrayBuffer());
   const downloaded = performance.now();
@@ -157,7 +157,7 @@ export async function fetchImageAsPart(url: string): Promise<Part> {
       .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
       .toBuffer({ resolveWithObject: true });
   } catch {
-    throw new GeminiError("couldn't read that photo");
+    throw new GeminiError("couldn't read that meme");
   }
 
   console.log(
