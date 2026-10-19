@@ -9,12 +9,15 @@ export default function Popover({
   message,
   signIn,
   above,
+  align = "right-0",
   onClose,
 }: {
   message: string;
+  // Horizontal anchoring classes; defaults to the control's right edge.
+  align?: string;
   // Open upward, e.g. for a control at the bottom of an image.
   above?: boolean;
-  // Adds a "Sign in" link after the message.
+  // The message itself links to /login.
   signIn?: boolean;
   onClose: () => void;
 }) {
@@ -39,16 +42,14 @@ export default function Popover({
     <div
       ref={ref}
       role="status"
-      className={`absolute right-0 z-10 w-max ${above ? "bottom-full mb-1" : "top-full mt-1"} max-w-56 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400`}
+      className={`absolute ${align} z-10 w-max ${above ? "bottom-full mb-1" : "top-full mt-1"} max-w-56 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400`}
     >
-      {message}
-      {signIn && (
-        <>
-          {" "}
-          <Link href="/login" className="font-medium text-gray-900 underline dark:text-gray-100">
-            Sign in
-          </Link>
-        </>
+      {signIn ? (
+        <Link href="/login" className="font-medium text-ink underline">
+          {message}
+        </Link>
+      ) : (
+        message
       )}
     </div>
   );

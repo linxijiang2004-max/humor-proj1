@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import GoogleSignInButton from "./google-sign-in-button";
 
 export const metadata: Metadata = {
-  title: "Sign in",
+  title: "sign in",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -17,12 +17,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { error } = await searchParams;
 
   return (
-    <main className="mx-auto w-full max-w-sm px-4 py-16">
-      <h1 className="mb-2 text-3xl font-bold">Sign in</h1>
-      <p className="mb-8 text-gray-500">Use your Google account to continue.</p>
+    <main className="mx-auto w-full max-w-sm px-3 sm:px-4 py-16">
+      <h1 className="mb-8 text-3xl font-bold">sign in</h1>
       {error && (
         <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-          Sign-in failed. Please try again.
+          that didn&apos;t work, try again
         </p>
       )}
       <GoogleSignInButton />

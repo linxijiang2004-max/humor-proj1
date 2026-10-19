@@ -5,10 +5,10 @@ export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function validateImageFile(file: File): string | null {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    return "The image must be a PNG, JPEG, WebP or GIF.";
+    return "png, jpeg, webp or gif";
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    return "The image must be 5 MB or smaller.";
+    return "max 5 mb";
   }
   return null;
 }

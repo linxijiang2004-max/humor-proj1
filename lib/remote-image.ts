@@ -59,16 +59,16 @@ async function assertPublicUrl(raw: string): Promise<URL> {
   try {
     url = new URL(raw);
   } catch {
-    throw new RemoteImageError("That doesn't look like a link.");
+    throw new RemoteImageError("that's not a link");
   }
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw new RemoteImageError("Only http:// and https:// links work.");
   }
   if (url.port && url.port !== "80" && url.port !== "443") {
-    throw new RemoteImageError("That link can't be used.");
+    throw new RemoteImageError("can't use that link");
   }
   if (url.username || url.password) {
-    throw new RemoteImageError("Links with a username or password can't be used.");
+    throw new RemoteImageError("no links with passwords");
   }
 
   const hostname = url.hostname.replace(/^\[|\]$/g, "");
@@ -76,17 +76,17 @@ async function assertPublicUrl(raw: string): Promise<URL> {
   try {
     addresses = isIP(hostname) ? [{ address: hostname }] : await lookup(hostname, { all: true });
   } catch {
-    throw new RemoteImageError("Couldn't find that website.");
+    throw new RemoteImageError("can't find that site");
   }
   if (addresses.length === 0 || addresses.some(({ address }) => isBlockedAddress(address))) {
-    throw new RemoteImageError("That link can't be used.");
+    throw new RemoteImageError("can't use that link");
   }
   return url;
 }
 
 async function readCapped(response: Response): Promise<Buffer> {
   const declared = Number(response.headers.get("content-length"));
-  if (declared > MAX_DOWNLOAD_BYTES) throw new RemoteImageError("That image is larger than 20 MB.");
+  if (declared > MAX_DOWNLOAD_BYTES) throw new RemoteImageError("too big, max 20 mb");
 
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -97,7 +97,7 @@ async function readCapped(response: Response): Promise<Buffer> {
     total += value.length;
     if (total > MAX_DOWNLOAD_BYTES) {
       await reader.cancel();
-      throw new RemoteImageError("That image is larger than 20 MB.");
+      throw new RemoteImageError("too big, max 20 mb");
     }
     chunks.push(value);
   }
@@ -119,7 +119,7 @@ async function download(raw: string): Promise<Buffer> {
       });
     } catch (err) {
       const timedOut = err instanceof DOMException && err.name === "TimeoutError";
-      throw new RemoteImageError(timedOut ? "That website took too long to respond." : "Couldn't download that link.");
+      throw new RemoteImageError(timedOut ? "that site timed out" : "couldn't download that");
     }
 
     if (response.status >= 300 && response.status < 400) {
@@ -129,11 +129,11 @@ async function download(raw: string): Promise<Buffer> {
       continue;
     }
     if (!response.ok || !response.body) {
-      throw new RemoteImageError(`Couldn't download that link (HTTP ${response.status}).`);
+      throw new RemoteImageError(`couldn't download that (${response.status})`);
     }
     return readCapped(response);
   }
-  throw new RemoteImageError("That link redirects too many times.");
+  throw new RemoteImageError("too many redirects");
 }
 
 // Downloads, checks the bytes really are a supported image (the
@@ -150,11 +150,11 @@ export async function fetchRemoteImage(raw: string): Promise<RemoteImage> {
 
   // GIFs keep their animation, so they're stored as-is.
   if (format === "gif") {
-    if (original.length > MAX_IMAGE_BYTES) throw new RemoteImageError("GIFs must be 5 MB or smaller.");
+    if (original.length > MAX_IMAGE_BYTES) throw new RemoteImageError("gifs max 5 mb");
     return { data: original, contentType: "image/gif", extension: "gif", originalBytes: original.length };
   }
   if (format !== "jpeg" && format !== "png" && format !== "webp") {
-    throw new RemoteImageError("That link isn't a PNG, JPEG, WebP or GIF image.");
+    throw new RemoteImageError("not a png, jpeg, webp, gif");
   }
 
   const data = await sharp(original)

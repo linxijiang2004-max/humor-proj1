@@ -4,7 +4,7 @@ import { getUserAndProfile, hasFullName } from "@/lib/supabase/server";
 import OnboardingForm from "./onboarding-form";
 
 export const metadata: Metadata = {
-  title: "Welcome",
+  title: "your name",
 };
 
 export default async function OnboardingPage() {
@@ -13,9 +13,8 @@ export default async function OnboardingPage() {
   if (hasFullName(profile)) redirect("/");
 
   return (
-    <main className="mx-auto w-full max-w-sm px-4 py-16">
-      <h1 className="mb-2 text-3xl font-bold">Welcome!</h1>
-      <p className="mb-8 text-gray-500">Tell us your name to finish setting up your account.</p>
+    <main className="mx-auto w-full max-w-sm px-3 sm:px-4 py-16">
+      <h1 className="mb-8 text-3xl font-bold">what&apos;s your name?</h1>
       <OnboardingForm profile={profile} />
     </main>
   );

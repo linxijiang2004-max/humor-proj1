@@ -64,8 +64,8 @@ export default function ProfileForm({
         {/* The whole avatar is the upload control; the real input is hidden
             but still focusable, so keyboard users can open the picker. */}
         <label
-          className="group relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-full focus-within:ring-2 focus-within:ring-blue-600 focus-within:ring-offset-2"
-          title="Change photo"
+          className="group relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-full focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2"
+          title="change photo"
         >
           <input
             type="file"
@@ -73,11 +73,11 @@ export default function ProfileForm({
             accept={ALLOWED_IMAGE_TYPES.join(",")}
             onChange={onFileChange}
             className="sr-only"
-            aria-label="Change profile photo"
+            aria-label="change photo"
           />
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageSrc} alt="Your profile photo" className="h-full w-full object-cover" />
+            <img src={imageSrc} alt="your photo" className="h-full w-full object-cover" />
           ) : (
             <span className="flex h-full w-full items-center justify-center bg-gray-200 text-3xl text-gray-500 dark:bg-gray-800">
               {initial}
@@ -97,17 +97,17 @@ export default function ProfileForm({
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
             </svg>
-            Change photo
+            change photo
           </span>
         </label>
 
         <div className="min-w-0">
-          <p className="truncate font-medium">{fullName || "No name yet"}</p>
+          <p className="truncate font-medium">{fullName || "no name yet"}</p>
           <p className="truncate text-sm text-gray-500">{email}</p>
           <p className="mt-1 text-xs text-gray-500">
             {preview
-              ? "New photo selected. Save to apply it."
-              : "Click the photo to change it. PNG, JPEG, WebP or GIF, up to 5 MB."}
+              ? "save to use this photo"
+              : "tap your photo to change"}
           </p>
         </div>
       </div>
@@ -115,11 +115,11 @@ export default function ProfileForm({
       {fileError && <p className="text-sm text-red-600">{fileError}</p>}
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">First name</span>
+        <span className="text-sm font-medium">first name</span>
         <input name="first_name" defaultValue={profile?.first_name ?? ""} className={inputClass} />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Last name</span>
+        <span className="text-sm font-medium">last name</span>
         <input name="last_name" defaultValue={profile?.last_name ?? ""} className={inputClass} />
       </label>
 
@@ -129,9 +129,9 @@ export default function ProfileForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        className="rounded-lg bg-accent px-4 py-2 font-semibold text-page transition-[filter] hover:brightness-110 disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save profile"}
+        {pending ? "saving…" : "save"}
       </button>
     </form>
   );

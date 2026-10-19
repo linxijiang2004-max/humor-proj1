@@ -47,7 +47,7 @@ export default function AvatarMenu({
     <div ref={ref} className="relative">
       <button
         type="button"
-        aria-label="Account menu"
+        aria-label="account"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -71,11 +71,11 @@ export default function AvatarMenu({
             {email && <p className="truncate text-xs text-gray-500">{email}</p>}
           </div>
           <Link role="menuitem" href="/profile" className={itemClass}>
-            Profile
+            profile
           </Link>
           <form action="/auth/signout" method="post">
             <button role="menuitem" type="submit" className={itemClass}>
-              Sign out
+              sign out
             </button>
           </form>
         </div>

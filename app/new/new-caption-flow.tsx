@@ -15,7 +15,7 @@ import {
 } from "./actions";
 
 const buttonClass =
-  "rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60";
+  "rounded-lg bg-accent px-4 py-2 font-semibold text-page transition-[filter] hover:brightness-110 disabled:opacity-60";
 // The two empty-state options: same size and outline so neither looks primary.
 const panelClass =
   "flex h-56 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 transition-colors hover:border-gray-500 hover:text-gray-300 focus-within:border-gray-400 dark:border-gray-700";
@@ -56,7 +56,7 @@ export default function NewCaptionFlow() {
     try {
       chosen = await downscaleImage(picked);
     } catch {
-      setError("Couldn't read that image. Try a different file.");
+      setError("can't read that one");
       return;
     }
     const invalid = validateImageFile(chosen);
@@ -141,7 +141,7 @@ export default function NewCaptionFlow() {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageSrc}
-          alt="Image to caption"
+          alt="your photo"
           className="max-h-96 w-full rounded-lg border border-gray-200 object-contain dark:border-gray-800"
         />
       ) : (
@@ -168,8 +168,8 @@ export default function NewCaptionFlow() {
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            <span className="font-medium">Choose an image</span>
-            <span className="text-xs">PNG, JPEG, WebP or GIF (GIFs up to 5 MB)</span>
+            <span className="font-medium">upload</span>
+            <span className="text-xs">a photo from this week</span>
           </label>
 
           <form onSubmit={linkAndGenerate} className={`${panelClass} px-5`}>
@@ -187,7 +187,7 @@ export default function NewCaptionFlow() {
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
             <label htmlFor="image-link" className="font-medium">
-              Paste an image link
+              or paste a link
             </label>
             <div className="flex w-full gap-2">
               <input
@@ -201,7 +201,7 @@ export default function NewCaptionFlow() {
                 className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-ink dark:border-gray-700 dark:bg-transparent"
               />
               <button type="submit" disabled={pending || !link.trim()} className={secondaryButtonClass}>
-                Use
+                use
               </button>
             </div>
           </form>
@@ -216,43 +216,43 @@ export default function NewCaptionFlow() {
 
       {status && (
         <p aria-live="polite" className="text-sm text-gray-500">
-          {status === "uploading" ? (link ? "Downloading image…" : "Uploading image…") : "Asking Gemini for captions… this can take a few seconds."}
+          {status === "uploading" ? (link ? "getting the photo…" : "uploading…") : "writing captions…"}
         </p>
       )}
 
       <div className="flex flex-wrap gap-3">
         {file && !image && (
           <button onClick={uploadAndGenerate} disabled={pending} className={buttonClass}>
-            Upload & generate captions
+            write captions
           </button>
         )}
         {image && !captions && !pending && (
           <button onClick={() => generate(image)} className={buttonClass}>
-            Try generating again
+            try again
           </button>
         )}
         {image && captions && (
           <button onClick={() => generate(image)} disabled={pending} className={secondaryButtonClass}>
-            Generate 4 more
+            write 4 more
           </button>
         )}
         {(file || image) && (
           <button onClick={startOver} disabled={pending} className={secondaryButtonClass}>
-            Use a different image
+            different photo
           </button>
         )}
       </div>
 
       {captions && (
         <section>
-          <h2 className="mb-1 text-xl font-semibold">Candidates</h2>
+          <h2 className="mb-1 text-xl font-semibold">pick one</h2>
           <p className="mb-4 text-sm text-gray-500">
-            Saved as drafts. Only you can see them until you publish one.
+            only you see these
             {published.size > 0 && (
               <>
                 {" "}
                 <Link href="/?t=week" className="text-gray-900 underline dark:text-gray-100">
-                  See it in the feed →
+                  see it in the feed
                 </Link>
               </>
             )}
@@ -266,14 +266,14 @@ export default function NewCaptionFlow() {
                 <span className="font-mono text-sm text-gray-400">{i + 1}</span>
                 <span className="flex-1">{caption.content}</span>
                 {published.has(caption.id) ? (
-                  <span className="shrink-0 self-center text-sm text-gray-500">Published</span>
+                  <span className="shrink-0 self-center text-sm text-gray-500">posted</span>
                 ) : (
                   <button
                     onClick={() => publish(caption.id)}
                     disabled={publishing !== null}
                     className="shrink-0 self-center rounded-md border border-gray-300 px-3 py-1 text-sm font-medium hover:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-900"
                   >
-                    {publishing === caption.id ? "Publishing…" : "Publish"}
+                    {publishing === caption.id ? "posting…" : "post"}
                   </button>
                 )}
               </li>

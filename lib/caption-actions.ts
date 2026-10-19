@@ -8,9 +8,7 @@ import {
   parseTimeframe,
   type CaptionCardData,
   type ImageCardData,
-  TOP_PICKS,
   type Page,
-  type RatingSummary,
   type Timeframe,
   type Vote,
 } from "@/lib/feed";
@@ -25,10 +23,11 @@ type CaptionRow = {
   id: number;
   content: string;
   like_count: number;
+  profile_id: string | null;
   images: { url: string } | null;
 };
 
-const CAPTION_COLUMNS = "id, content, like_count, images(url)";
+const CAPTION_COLUMNS = "id, content, like_count, profile_id, images(url)";
 
 async function getViewer() {
   const supabase = await createClient();
@@ -44,11 +43,18 @@ function timeframeStart(timeframe: unknown) {
   return days ? new Date(Date.now() - days * 86_400_000).toISOString() : null;
 }
 
+// Short message for the screen; the database's own wording goes to the log.
+function failed(message: string, error: { message: string }) {
+  console.error(message, error.message);
+  return message;
+}
+
 function parseOffset(value: unknown, max = Number.MAX_SAFE_INTEGER) {
   return Number.isInteger(value) && (value as number) >= 0 ? Math.min(value as number, max) : 0;
 }
 
-// Adds the viewer's own vote and favorite to each caption.
+// Adds the viewer's own vote and favorite to each caption, and whether they
+// wrote it. The author id itself isn't sent to the client.
 async function toCards(
   supabase: Supabase,
   user: User | null,
@@ -93,6 +99,7 @@ async function toCards(
       score: row.like_count,
       myVote,
       favorited: allFavorited || favorites.has(row.id),
+      mine: user !== null && row.profile_id === user.id,
     };
   });
 }
@@ -118,7 +125,7 @@ export async function loadFeedPage(timeframe: Timeframe, offset: number): Promis
     .range(start, start + limit)
     .overrideTypes<CaptionRow[], { merge: false }>();
 
-  if (error) return { items: [], cursor: null, error: `Couldn't load captions: ${error.message}` };
+  if (error) return { items: [], cursor: null, error: failed("couldn't load captions", error) };
 
   const hasMore = data.length > limit && start + limit < FEED_MAX;
   return {
@@ -137,7 +144,7 @@ export async function loadUnratedPage(timeframe: Timeframe, cursor: number): Pro
   const before = parseOffset(cursor);
   const since = timeframeStart(timeframe);
   const { supabase, user } = await getViewer();
-  if (!user) return { items: [], cursor: null, error: "Sign in to rate captions." };
+  if (!user) return { items: [], cursor: null, error: "sign in to vote" };
 
   // Anti-join: embed the viewer's own vote and keep rows where it is missing.
   const unrated = (columns: string, options?: { count: "exact"; head: true }) => {
@@ -159,7 +166,7 @@ export async function loadUnratedPage(timeframe: Timeframe, cursor: number): Pro
     before === 0 ? unrated("id", { count: "exact", head: true }) : null,
   ]);
 
-  if (page.error) return { items: [], cursor: null, error: `Couldn't load captions: ${page.error.message}` };
+  if (page.error) return { items: [], cursor: null, error: failed("couldn't load captions", page.error) };
 
   const rows = page.data.slice(0, PAGE_SIZE);
   return {
@@ -169,59 +176,11 @@ export async function loadUnratedPage(timeframe: Timeframe, cursor: number): Pro
   };
 }
 
-// Wrap-up for when the Unrated feed is empty.
-export async function loadRatingSummary(): Promise<RatingSummary | null> {
-  const { supabase, user } = await getViewer();
-  if (!user) return null;
-
-  const myVotes = () =>
-    supabase.from("caption_votes").select("caption_id", { count: "exact", head: true }).eq("profile_id", user.id);
-
-  const [rated, upvotes, best, top] = await Promise.all([
-    myVotes(),
-    myVotes().eq("vote_value", 1),
-    supabase
-      .from("captions")
-      .select("content, like_count, caption_votes!inner(vote_value)")
-      .eq("is_public", true)
-      .eq("caption_votes.profile_id", user.id)
-      .eq("caption_votes.vote_value", 1)
-      .order("like_count", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(1)
-      .maybeSingle<{ content: string; like_count: number }>(),
-    // The crowd's top-rated: highest scores overall, positive scores only.
-    supabase
-      .from("captions")
-      .select("id")
-      .eq("is_public", true)
-      .gt("like_count", 0)
-      .order("like_count", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(TOP_PICKS),
-  ]);
-
-  const topIds = (top.data ?? []).map((row) => row.id as number);
-  const matches = topIds.length > 0 ? await myVotes().eq("vote_value", 1).in("caption_id", topIds) : null;
-
-  for (const result of [rated, upvotes, best, top, matches]) {
-    if (result?.error) console.error("Couldn't load rating summary", result.error.message);
-  }
-
-  return {
-    rated: rated.count ?? 0,
-    upvotes: upvotes.count ?? 0,
-    bestPick: best.data ? { content: best.data.content, score: best.data.like_count } : null,
-    topMatches: matches?.count ?? 0,
-    topSize: topIds.length,
-  };
-}
-
 // The viewer's favorites, most recently saved first.
 export async function loadFavoritesPage(offset: number): Promise<Page<CaptionCardData>> {
   const start = parseOffset(offset);
   const { supabase, user } = await getViewer();
-  if (!user) return { items: [], cursor: null, error: "Sign in to see your favorites." };
+  if (!user) return { items: [], cursor: null, error: "sign in first" };
 
   const { data, error } = await supabase
     .from("caption_favorites")
@@ -232,7 +191,7 @@ export async function loadFavoritesPage(offset: number): Promise<Page<CaptionCar
     .range(start, start + PAGE_SIZE)
     .overrideTypes<{ caption_id: number; captions: (CaptionRow & { is_public: boolean }) | null }[], { merge: false }>();
 
-  if (error) return { items: [], cursor: null, error: `Couldn't load favorites: ${error.message}` };
+  if (error) return { items: [], cursor: null, error: failed("couldn't load saves", error) };
 
   // A favorited caption that has since been unpublished is skipped.
   const rows = data
@@ -242,6 +201,31 @@ export async function loadFavoritesPage(offset: number): Promise<Page<CaptionCar
 
   return {
     items: await toCards(supabase, user, rows, true),
+    cursor: data.length > PAGE_SIZE ? start + PAGE_SIZE : null,
+  };
+}
+
+// Captions the viewer has published, newest first. Drafts (generated but not
+// picked) are left out.
+export async function loadMinePage(offset: number): Promise<Page<CaptionCardData>> {
+  const start = parseOffset(offset);
+  const { supabase, user } = await getViewer();
+  if (!user) return { items: [], cursor: null, error: "sign in first" };
+
+  const { data, error } = await supabase
+    .from("captions")
+    .select(CAPTION_COLUMNS)
+    .eq("profile_id", user.id)
+    .eq("is_public", true)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(start, start + PAGE_SIZE)
+    .overrideTypes<CaptionRow[], { merge: false }>();
+
+  if (error) return { items: [], cursor: null, error: failed("couldn't load yours", error) };
+
+  return {
+    items: await toCards(supabase, user, data.slice(0, PAGE_SIZE)),
     cursor: data.length > PAGE_SIZE ? start + PAGE_SIZE : null,
   };
 }
@@ -260,7 +244,7 @@ export async function loadImagesPage(offset: number): Promise<Page<ImageCardData
     .range(start, start + PAGE_SIZE)
     .overrideTypes<{ id: number; url: string }[], { merge: false }>();
 
-  if (error) return { items: [], cursor: null, error: `Couldn't load images: ${error.message}` };
+  if (error) return { items: [], cursor: null, error: failed("couldn't load images", error) };
 
   return {
     items: data.slice(0, PAGE_SIZE).map(({ id, url }) => ({ id, url })),
@@ -273,10 +257,10 @@ export type VoteResult = { score: number } | { error: string };
 // value 0 removes the vote. Returns the caption's new score, which also
 // corrects the optimistic one if other people voted in the meantime.
 export async function setVote(captionId: number, value: Vote): Promise<VoteResult> {
-  if (!Number.isInteger(captionId) || ![-1, 0, 1].includes(value)) return { error: "Invalid vote." };
+  if (!Number.isInteger(captionId) || ![-1, 0, 1].includes(value)) return { error: "that vote didn't work" };
 
   const { supabase, user } = await getViewer();
-  if (!user) return { error: "Sign in to vote." };
+  if (!user) return { error: "sign in to vote" };
 
   const { data: caption } = await supabase
     .from("captions")
@@ -284,7 +268,7 @@ export async function setVote(captionId: number, value: Vote): Promise<VoteResul
     .eq("id", captionId)
     .eq("is_public", true)
     .maybeSingle();
-  if (!caption) return { error: "That caption no longer exists." };
+  if (!caption) return { error: "that caption's gone" };
 
   const { error } =
     value === 0
@@ -295,7 +279,7 @@ export async function setVote(captionId: number, value: Vote): Promise<VoteResul
             { caption_id: captionId, profile_id: user.id, vote_value: value },
             { onConflict: "profile_id,caption_id" },
           );
-  if (error) return { error: `Couldn't save your vote: ${error.message}` };
+  if (error) return { error: failed("vote didn't save", error) };
 
   // The trigger on caption_votes has already updated like_count.
   const { data, error: readError } = await supabase
@@ -303,16 +287,16 @@ export async function setVote(captionId: number, value: Vote): Promise<VoteResul
     .select("like_count")
     .eq("id", captionId)
     .single<{ like_count: number }>();
-  if (readError) return { error: `Couldn't load the score: ${readError.message}` };
+  if (readError) return { error: failed("score didn't load", readError) };
 
   return { score: data.like_count };
 }
 
 export async function setFavorite(captionId: number, favorited: boolean): Promise<{ error?: string }> {
-  if (!Number.isInteger(captionId) || typeof favorited !== "boolean") return { error: "Invalid request." };
+  if (!Number.isInteger(captionId) || typeof favorited !== "boolean") return { error: "that didn't work" };
 
   const { supabase, user } = await getViewer();
-  if (!user) return { error: "Sign in to save favorites." };
+  if (!user) return { error: "sign in to save" };
 
   const { error } = favorited
     ? await supabase
@@ -323,6 +307,6 @@ export async function setFavorite(captionId: number, favorited: boolean): Promis
         )
     : await supabase.from("caption_favorites").delete().eq("profile_id", user.id).eq("caption_id", captionId);
 
-  if (error) return { error: `Couldn't update favorites: ${error.message}` };
+  if (error) return { error: failed("didn't save, try again", error) };
   return {};
 }

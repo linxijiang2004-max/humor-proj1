@@ -9,7 +9,9 @@ export function usePages<T extends { id: number }>(
   initial: Page<T>,
   fetchPage: (offset: number) => Promise<Page<T>>,
 ) {
-  const [items, setItems] = useState(initial.items);
+  // batchStart: index of the first item of the latest page, for its
+  // arrival animation.
+  const [{ items, batchStart }, setList] = useState({ items: initial.items, batchStart: 0 });
   const [cursor, setCursor] = useState(initial.cursor);
   const [error, setError] = useState(initial.error ?? null);
   const [loading, setLoading] = useState(false);
@@ -24,14 +26,17 @@ export function usePages<T extends { id: number }>(
     try {
       const page = await fetchPage(cursor);
       // Scores can change between pages, so a caption may show up twice.
-      setItems((current) => {
-        const seen = new Set(current.map((item) => item.id));
-        return [...current, ...page.items.filter((item) => !seen.has(item.id))];
+      setList((current) => {
+        const seen = new Set(current.items.map((item) => item.id));
+        return {
+          items: [...current.items, ...page.items.filter((item) => !seen.has(item.id))],
+          batchStart: current.items.length,
+        };
       });
       setCursor(page.cursor);
       if (page.error) setError(page.error);
     } catch {
-      setError("Couldn't load more. Check your connection and try again.");
+      setError("couldn't load, try again");
     } finally {
       loadingRef.current = false;
       setLoading(false);
@@ -52,8 +57,11 @@ export function usePages<T extends { id: number }>(
   }, [loadMore, cursor, error]);
 
   const update = useCallback((id: number, patch: Partial<T>) => {
-    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+    setList((current) => ({
+      ...current,
+      items: current.items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    }));
   }, []);
 
-  return { items, update, hasMore: cursor !== null, error, loading, loadMore, sentinelRef };
+  return { items, batchStart, update, hasMore: cursor !== null, error, loading, loadMore, sentinelRef };
 }

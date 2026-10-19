@@ -78,7 +78,7 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
     const timedOut = err instanceof DOMException && err.name === "TimeoutError";
     log(timedOut ? "timed out" : "network error");
     throw new GeminiError(
-      timedOut ? "Gemini took too long to respond. Please try again." : "Couldn't reach Gemini. Please try again.",
+      timedOut ? "took too long, try again" : "couldn't connect, try again",
     );
   }
 
@@ -93,10 +93,10 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
     // Log the details server-side; show the user something actionable.
     console.error("Gemini error", response.status, body?.error?.message);
     if (response.status === 429) {
-      throw new GeminiError("Gemini rate limit reached. Wait a minute and try again.");
+      throw new GeminiError("busy, try in a minute");
     }
     if (response.status === 503) {
-      throw new GeminiError("Gemini is overloaded right now. Try again in a moment.");
+      throw new GeminiError("busy, try again soon");
     }
     if (response.status === 400 && /api key/i.test(body?.error?.message ?? "")) {
       throw new GeminiError("Gemini rejected the API key. Check GEMINI_API_KEY.");
@@ -104,11 +104,11 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
     if (response.status === 404) {
       throw new GeminiError(`Gemini model "${GEMINI_MODEL}" wasn't found. Check GEMINI_MODEL.`);
     }
-    throw new GeminiError(`Gemini request failed (HTTP ${response.status}). Please try again.`);
+    throw new GeminiError("that didn't work, try again");
   }
 
   if (body?.promptFeedback?.blockReason) {
-    throw new GeminiError("Gemini declined to process this image. Try a different one.");
+    throw new GeminiError("can't caption that one");
   }
 
   const candidate = body?.candidates?.[0];
@@ -121,8 +121,8 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
     const reason = candidate?.finishReason;
     throw new GeminiError(
       reason === "SAFETY"
-        ? "Gemini declined to process this image. Try a different one."
-        : "Gemini returned an empty response. Please try again.",
+        ? "can't caption that one"
+        : "that didn't work, try again",
     );
   }
 
@@ -139,11 +139,11 @@ export async function fetchImageAsPart(url: string): Promise<Part> {
   try {
     response = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: "no-store" });
   } catch {
-    throw new GeminiError("Couldn't download the image to send to Gemini.");
+    throw new GeminiError("couldn't read that photo");
   }
   const mimeType = response.headers.get("content-type")?.split(";")[0] ?? "";
   if (!response.ok || !mimeType.startsWith("image/")) {
-    throw new GeminiError("Couldn't download the image to send to Gemini.");
+    throw new GeminiError("couldn't read that photo");
   }
   const original = Buffer.from(await response.arrayBuffer());
   const downloaded = performance.now();
@@ -157,7 +157,7 @@ export async function fetchImageAsPart(url: string): Promise<Part> {
       .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
       .toBuffer({ resolveWithObject: true });
   } catch {
-    throw new GeminiError("Couldn't read that image. Try a PNG, JPEG, WebP or GIF.");
+    throw new GeminiError("couldn't read that photo");
   }
 
   console.log(

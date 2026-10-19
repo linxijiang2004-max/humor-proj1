@@ -11,8 +11,9 @@ type Props = {
   favorited: boolean;
   signedIn: boolean;
   onChange: (favorited: boolean) => void;
-  // Sits on top of the image: needs its own backdrop to stay legible on
-  // both light and dark images.
+  // From 640px up it sits on top of the image and needs its own backdrop to
+  // stay legible on both light and dark images. On phones it's a plain icon
+  // in the card's bottom row.
   overlay?: boolean;
 };
 
@@ -20,25 +21,29 @@ type Props = {
 // image) keeps the image, which is the content, undimmed.
 const overlayClass = (favorited: boolean) =>
   [
-    "flex h-8 w-8 items-center justify-center rounded-full bg-black/35 backdrop-blur-[8px] transition-colors",
-    "hover:bg-black/55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-    favorited ? "text-accent" : "text-white/90 hover:text-white",
+    iconButtonClass(favorited),
+    "sm:h-8 sm:w-8 sm:bg-black/35 sm:backdrop-blur-[8px] sm:hover:bg-black/55 sm:focus-visible:outline-offset-2",
+    "sm:pointer-coarse:h-11 sm:pointer-coarse:w-11",
+    favorited ? "" : "sm:text-white/90 sm:hover:text-white",
   ].join(" ");
 
 export default function FavoriteButton({ captionId, favorited, signedIn, onChange, overlay }: Props) {
   const [message, setMessage] = useState<{ text: string; signIn?: boolean } | null>(null);
+  // Pops once when a click fills the heart.
+  const [popped, setPopped] = useState(false);
   const busy = useRef(false);
   const closeMessage = useCallback(() => setMessage(null), []);
 
   async function toggle() {
     if (!signedIn) {
-      setMessage({ text: "Sign in to save favorites.", signIn: true });
+      setMessage({ text: "sign in to save", signIn: true });
       return;
     }
     if (busy.current) return;
     busy.current = true;
 
     const next = !favorited;
+    setPopped(next);
     onChange(next);
     const result = await setFavorite(captionId, next);
     busy.current = false;
@@ -52,12 +57,17 @@ export default function FavoriteButton({ captionId, favorited, signedIn, onChang
     <div className="relative">
       <button
         type="button"
-        aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+        aria-label={favorited ? "unsave" : "save"}
         aria-pressed={signedIn ? favorited : undefined}
+        data-shortcut="favorite"
         onClick={toggle}
+        onAnimationEnd={() => setPopped(false)}
         className={overlay ? overlayClass(favorited) : iconButtonClass(favorited)}
       >
-        <HeartIcon filled={favorited} className={overlay ? "h-[17px] w-[17px]" : "h-[18px] w-[18px]"} />
+        <HeartIcon
+          filled={favorited}
+          className={`h-[18px] w-[18px] ${overlay ? "sm:h-[17px] sm:w-[17px]" : ""} ${popped ? "motion-safe:animate-pop-heart" : ""}`}
+        />
       </button>
       {message && (
         <Popover message={message.text} signIn={message.signIn} above={overlay} onClose={closeMessage} />

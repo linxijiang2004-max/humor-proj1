@@ -13,7 +13,7 @@ export default function OnboardingForm({ profile }: { profile: Profile | null })
   return (
     <form action={action} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">First name</span>
+        <span className="text-sm font-medium">first name</span>
         <input
           name="first_name"
           required
@@ -22,7 +22,7 @@ export default function OnboardingForm({ profile }: { profile: Profile | null })
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Last name</span>
+        <span className="text-sm font-medium">last name</span>
         <input
           name="last_name"
           required
@@ -36,9 +36,9 @@ export default function OnboardingForm({ profile }: { profile: Profile | null })
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        className="rounded-lg bg-accent px-4 py-2 font-semibold text-page transition-[filter] hover:brightness-110 disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Continue"}
+        {pending ? "saving…" : "continue"}
       </button>
     </form>
   );

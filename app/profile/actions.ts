@@ -31,7 +31,7 @@ export async function completeOnboarding(
   const lastName = readName(formData, "last_name");
 
   if (!firstName || !lastName) {
-    return { error: "Please enter both your first and last name." };
+    return { error: "need both names" };
   }
 
   const { error } = await supabase
@@ -69,7 +69,10 @@ export async function updateProfile(
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(path, avatar, { upsert: true, contentType: avatar.type });
-    if (uploadError) return { error: `Upload failed: ${uploadError.message}` };
+    if (uploadError) {
+    console.error("upload failed", uploadError.message);
+    return { error: "upload failed" };
+  }
 
     const {
       data: { publicUrl },
@@ -82,5 +85,5 @@ export async function updateProfile(
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
-  return { success: "Profile saved." };
+  return { success: "saved" };
 }

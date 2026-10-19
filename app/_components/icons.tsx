@@ -3,13 +3,15 @@
 
 type IconProps = { filled?: boolean; className?: string };
 
+// The fill fades in with fill-opacity (`none` → color can't transition).
 function Icon({ filled, className, children }: IconProps & { children: React.ReactNode }) {
   return (
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      className={className}
-      fill={filled ? "currentColor" : "none"}
+      className={`transition-[fill-opacity] duration-150 ease-out motion-reduce:transition-none ${className ?? ""}`}
+      fill="currentColor"
+      fillOpacity={filled ? 1 : 0}
       stroke="currentColor"
       strokeWidth={1.75}
       strokeLinecap="round"

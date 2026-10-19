@@ -38,7 +38,10 @@ async function storeImage(
   const { error: uploadError } = await supabase.storage
     .from("images")
     .upload(path, body, { contentType });
-  if (uploadError) return { error: `Upload failed: ${uploadError.message}` };
+  if (uploadError) {
+    console.error("upload failed", uploadError.message);
+    return { error: "upload failed" };
+  }
 
   const {
     data: { publicUrl },
@@ -53,7 +56,8 @@ async function storeImage(
   if (error) {
     // Don't leave an untracked file behind in Storage.
     await supabase.storage.from("images").remove([path]);
-    return { error: `Couldn't save the image: ${error.message}` };
+    console.error("couldn't save the photo", error.message);
+    return { error: "couldn't save the photo" };
   }
 
   return { image: data };
@@ -65,7 +69,7 @@ export async function uploadImage(formData: FormData): Promise<UploadResult> {
 
   const file = formData.get("image");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "Choose an image first." };
+    return { error: "pick a photo first" };
   }
   const invalid = validateImageFile(file);
   if (invalid) return { error: invalid };
@@ -80,7 +84,7 @@ export async function uploadImage(formData: FormData): Promise<UploadResult> {
 // the feed doesn't break when the source site removes or blocks the image.
 export async function uploadImageFromUrl(url: string): Promise<UploadResult> {
   const { supabase, user } = await requireUser();
-  if (typeof url !== "string" || !url.trim()) return { error: "Paste an image link first." };
+  if (typeof url !== "string" || !url.trim()) return { error: "paste a link first" };
 
   const started = performance.now();
   let remote;
@@ -89,7 +93,7 @@ export async function uploadImageFromUrl(url: string): Promise<UploadResult> {
   } catch (err) {
     if (err instanceof RemoteImageError) return { error: err.message };
     console.error("fetchRemoteImage failed", err);
-    return { error: "Couldn't use that link. Try downloading the image and uploading it instead." };
+    return { error: "that link didn't work" };
   }
   const downloaded = performance.now();
 
@@ -120,14 +124,14 @@ function parseCaptions(raw: string): string[] {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new GeminiError("Gemini returned captions in an unexpected format. Please try again.");
+    throw new GeminiError("that didn't work, try again");
   }
   const list = (parsed as { captions?: unknown })?.captions;
   const captions = Array.isArray(list)
     ? list.filter((c): c is string => typeof c === "string").map((c) => c.trim()).filter(Boolean)
     : [];
   if (captions.length < CAPTION_COUNT) {
-    throw new GeminiError(`Gemini returned ${captions.length} usable captions instead of ${CAPTION_COUNT}. Please try again.`);
+    throw new GeminiError("that didn't work, try again");
   }
   return captions.slice(0, CAPTION_COUNT);
 }
@@ -152,9 +156,12 @@ export async function generateCaptions(imageId: number): Promise<GenerateResult>
       is_library: boolean;
     }>();
 
-  if (imageError) return { error: `Couldn't load the image: ${imageError.message}` };
+  if (imageError) {
+    console.error("couldn't load the photo", imageError.message);
+    return { error: "couldn't load the photo" };
+  }
   if (!image || (image.profile_id !== user.id && !image.is_library)) {
-    return { error: "Image not found." };
+    return { error: "photo not found" };
   }
 
   const steps: Step[] = [];
@@ -198,7 +205,7 @@ export async function generateCaptions(imageId: number): Promise<GenerateResult>
 
     if (error) {
       console.error("save_caption_request failed", error);
-      return { error: `Captions were generated but couldn't be saved: ${error.message}` };
+      return { error: "couldn't save captions" };
     }
 
     console.log(`[new] save_caption_request: ${seconds(saveStarted)} | generateCaptions total ${seconds(started)}`);
@@ -207,7 +214,7 @@ export async function generateCaptions(imageId: number): Promise<GenerateResult>
   } catch (err) {
     if (err instanceof GeminiError) return { error: err.message };
     console.error("generateCaptions failed", err);
-    return { error: "Something went wrong while generating captions. Please try again." };
+    return { error: "that didn't work, try again" };
   }
 }
 
@@ -215,7 +222,7 @@ export type PublishResult = { ok: true } | { error: string };
 
 // Moves one of the viewer's own draft captions into the public feed.
 export async function publishCaption(captionId: number): Promise<PublishResult> {
-  if (!Number.isInteger(captionId)) return { error: "Invalid caption." };
+  if (!Number.isInteger(captionId)) return { error: "that didn't work" };
   const { supabase, user } = await requireUser();
 
   // The update policy only matches the viewer's own rows; the explicit
@@ -228,7 +235,10 @@ export async function publishCaption(captionId: number): Promise<PublishResult> 
     .select("id")
     .maybeSingle();
 
-  if (error) return { error: `Couldn't publish: ${error.message}` };
-  if (!data) return { error: "Caption not found." };
+  if (error) {
+    console.error("couldn't post", error.message);
+    return { error: "couldn't post" };
+  }
+  if (!data) return { error: "caption not found" };
   return { ok: true };
 }

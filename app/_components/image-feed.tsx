@@ -1,6 +1,7 @@
 "use client";
 
 import type { ImageCardData, Page } from "@/lib/feed";
+import EmptyState from "./empty-state";
 import ListFooter from "./list-footer";
 import Masonry from "./masonry";
 import { usePages } from "./use-pages";
@@ -12,24 +13,30 @@ export default function ImageFeed({
   initial: Page<ImageCardData>;
   fetchPage: (offset: number) => Promise<Page<ImageCardData>>;
 }) {
-  const { items, hasMore, error, loading, loadMore, sentinelRef } = usePages(initial, fetchPage);
+  const { items, batchStart, hasMore, error, loading, loadMore, sentinelRef } = usePages(initial, fetchPage);
 
   if (items.length === 0 && !hasMore) {
-    return <p className="py-16 text-center text-gray-500">{error ?? "No images yet."}</p>;
+    return (
+      <div className="py-16 text-center text-muted">
+        {error ?? <EmptyState text="no images yet" href="/new" action="add one" />}
+      </div>
+    );
   }
 
   return (
     <>
-      <Masonry>
+      <Masonry batchStart={batchStart}>
         {items.map((image) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={image.id}
-            src={image.url}
-            alt=""
-            loading="lazy"
-            className="block w-full rounded-[14px] bg-card"
-          />
+          // The wrapper clips, so the hover zoom stays on the image.
+          <div key={image.id} className="overflow-hidden rounded-[14px] bg-card">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={image.url}
+              alt=""
+              loading="lazy"
+              className="block w-full transition-transform duration-[250ms] ease-out hover:scale-[1.02] motion-reduce:transition-none"
+            />
+          </div>
         ))}
       </Masonry>
       <ListFooter
@@ -38,6 +45,7 @@ export default function ImageFeed({
         loading={loading}
         error={error}
         onLoadMore={loadMore}
+        images
       />
     </>
   );

@@ -7,6 +7,7 @@
 :root {
   --bg: #0b0b0c; /* page */
   --card: #161618; /* card surface; separates from the page by value, no border */
+  --card-hover: #1d1d20; /* one step lighter, for cards that are links */
   --text: #f2f2f0;
   --muted: #8a8a8e;
   /* Placeholder. Only for interactive and active states. */
@@ -18,11 +19,62 @@
 @theme inline {
   --color-page: var(--bg);
   --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
   --color-ink: var(--text);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Motion is feedback only: each animation answers something the user did.
+   Callers gate them with `motion-safe:`. */
+@theme {
+  /* Vote arrow: scales to 1.15 and settles. */
+  --animate-pop: pop 220ms ease-out;
+  /* Heart: a slightly bigger pop, it's the more deliberate action. */
+  --animate-pop-heart: pop-heart 240ms ease-out;
+  /* Feed cards arriving; the stagger delay is set inline. */
+  --animate-card-in: card-in 260ms ease-out both;
+
+  @keyframes pop {
+    45% {
+      transform: scale(1.15);
+    }
+  }
+  @keyframes pop-heart {
+    45% {
+      transform: scale(1.25);
+    }
+  }
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+/* Caption card layout. Phones: caption, image, then the actions along the
+   bottom edge where the thumb is. 640px and up: votes beside the caption,
+   the heart on the image (or on its own row when there's no image). One set
+   of controls, placed by grid area, so nothing is rendered twice. */
+.caption-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "caption caption" "image image" "votes heart";
+}
+.caption-card[data-no-image] {
+  grid-template-areas: "caption caption" "votes heart";
+}
+@media (min-width: 640px) {
+  .caption-card {
+    column-gap: 12px;
+    grid-template-areas: "caption votes" "image image";
+  }
+  .caption-card[data-no-image] {
+    grid-template-areas: "caption votes" "heart heart";
+  }
 }
 
 body {

@@ -22,7 +22,7 @@ export default function GoogleSignInButton() {
       disabled={loading}
       className="w-full rounded-lg border border-gray-300 px-4 py-3 font-medium hover:bg-gray-50 disabled:opacity-60 dark:hover:bg-gray-900"
     >
-      {loading ? "Redirecting…" : "Continue with Google"}
+      {loading ? "opening Google…" : "continue with Google"}
     </button>
   );
 }
