@@ -7,17 +7,18 @@ import sharp, { type OutputInfo } from "sharp";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const REQUEST_TIMEOUT_MS = 45_000;
 
-// Pinned to an explicit version so behavior and latency can't change under
-// us. Set GEMINI_MODEL in .env.local and in Vercel; never use a "-latest" alias.
+// Fallback model when the admin-managed chain config (llm_models) can't be
+// read or names none. Pinned to an explicit version so behavior and latency
+// can't change under us. Set GEMINI_MODEL in .env.local and in Vercel; never
+// use a "-latest" alias.
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 // Neither step needs extended reasoning, and thinking dominated latency
 // (~20s → ~3s on gemini-3.8-flash). Each model accepts different values:
 // flash-lite rejects thinkingBudget but takes "minimal"; full flash rejects
 // "minimal", and its thinkingBudget: 0 wasn't always honored, but "low" was.
-const THINKING_CONFIG = GEMINI_MODEL.includes("flash-lite")
-  ? { thinkingLevel: "minimal" }
-  : { thinkingLevel: "low" };
+const thinkingConfig = (model: string) =>
+  model.includes("flash-lite") ? { thinkingLevel: "minimal" } : { thinkingLevel: "low" };
 
 // Images sent to Gemini are re-encoded to at most this size.
 const MAX_IMAGE_EDGE = 1024;
@@ -31,6 +32,8 @@ type Part = { text: string } | { inlineData: { mimeType: string; data: string } 
 type GenerateOptions = {
   // Short name for the server log, e.g. "describe".
   label: string;
+  // Gemini model id, e.g. "gemini-3.5-flash-lite". Defaults to GEMINI_MODEL.
+  model?: string;
   parts: Part[];
   // Ask Gemini for JSON matching this schema instead of free text.
   responseSchema?: object;
@@ -38,14 +41,19 @@ type GenerateOptions = {
 
 export type GeminiResult = {
   text: string;
-  // The concrete model version that answered (e.g. when GEMINI_MODEL is an
-  // alias like "gemini-flash-latest").
+  // The concrete model version that answered (e.g. when the requested model
+  // is an alias like "gemini-flash-latest").
   model: string;
 };
 
 const kb = (bytes: number) => `${(bytes / 1024).toFixed(0)} KB`;
 
-export async function generate({ label, parts, responseSchema }: GenerateOptions): Promise<GeminiResult> {
+export async function generate({
+  label,
+  model = GEMINI_MODEL,
+  parts,
+  responseSchema,
+}: GenerateOptions): Promise<GeminiResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new GeminiError("Caption generation isn't configured: GEMINI_API_KEY is missing on the server.");
@@ -54,20 +62,20 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
   const requestBody = JSON.stringify({
     contents: [{ role: "user", parts }],
     generationConfig: {
-      thinkingConfig: THINKING_CONFIG,
+      thinkingConfig: thinkingConfig(model),
       ...(responseSchema && { responseMimeType: "application/json", responseSchema }),
     },
   });
   const started = performance.now();
   const log = (outcome: string) =>
     console.log(
-      `[gemini] ${label}: ${outcome} | ${GEMINI_MODEL} | request ${kb(Buffer.byteLength(requestBody))}` +
+      `[gemini] ${label}: ${outcome} | ${model} | request ${kb(Buffer.byteLength(requestBody))}` +
         ` | ${((performance.now() - started) / 1000).toFixed(2)}s`,
     );
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}/models/${GEMINI_MODEL}:generateContent`, {
+    response = await fetch(`${API_BASE}/models/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: requestBody,
@@ -102,7 +110,7 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
       throw new GeminiError("Gemini rejected the API key. Check GEMINI_API_KEY.");
     }
     if (response.status === 404) {
-      throw new GeminiError(`Gemini model "${GEMINI_MODEL}" wasn't found. Check GEMINI_MODEL.`);
+      throw new GeminiError(`Gemini model "${model}" wasn't found. Check the model in the admin console or GEMINI_MODEL.`);
     }
     throw new GeminiError("that didn't work, try again");
   }
@@ -126,7 +134,7 @@ export async function generate({ label, parts, responseSchema }: GenerateOptions
     );
   }
 
-  return { text, model: body?.modelVersion || GEMINI_MODEL };
+  return { text, model: body?.modelVersion || model };
 }
 
 // Downloads an image so it can be sent inline. Gemini can't fetch arbitrary

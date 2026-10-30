@@ -2,7 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { CAPTION_COUNT, DESCRIBE_PROMPT, captionPrompt } from "@/lib/caption-prompts";
+import { appendix, assertCallable, fillTemplate, loadCaptionPlan } from "@/lib/caption-chain";
+import { CAPTION_COUNT } from "@/lib/caption-prompts";
 import { GeminiError, fetchImageAsPart, generate } from "@/lib/gemini";
 import { fileExtension, validateImageFile } from "@/lib/image-upload";
 import { RemoteImageError, fetchRemoteImage } from "@/lib/remote-image";
@@ -136,25 +137,29 @@ function parseCaptions(raw: string): string[] {
   return captions.slice(0, CAPTION_COUNT);
 }
 
-// Two Gemini steps (describe → caption), then one atomic database write.
-// Nothing is saved until both Gemini calls succeed, and the write itself is a
-// single Postgres transaction (save_caption_request), so a failure anywhere
-// leaves no caption_requests, steps, captions or cached description behind.
+// The chain's Gemini steps (describe → … → caption; see lib/caption-chain.ts),
+// then one atomic database write. Nothing is saved until every Gemini call
+// succeeds, and the write itself is a single Postgres transaction
+// (save_caption_request), so a failure anywhere leaves no caption_requests,
+// steps, captions or cached description behind.
 export async function generateCaptions(imageId: number): Promise<GenerateResult> {
   const started = performance.now();
   const { supabase, user } = await requireUser();
 
-  const { data: image, error: imageError } = await supabase
-    .from("images")
-    .select("id, url, description, profile_id, is_library")
-    .eq("id", imageId)
-    .maybeSingle<{
-      id: number;
-      url: string;
-      description: string | null;
-      profile_id: string | null;
-      is_library: boolean;
-    }>();
+  const [{ data: image, error: imageError }, plan] = await Promise.all([
+    supabase
+      .from("images")
+      .select("id, url, description, profile_id, is_library")
+      .eq("id", imageId)
+      .maybeSingle<{
+        id: number;
+        url: string;
+        description: string | null;
+        profile_id: string | null;
+        is_library: boolean;
+      }>(),
+    loadCaptionPlan(supabase),
+  ]);
 
   if (imageError) {
     console.error("couldn't load the meme", imageError.message);
@@ -167,33 +172,49 @@ export async function generateCaptions(imageId: number): Promise<GenerateResult>
   const steps: Step[] = [];
   let description = image.description;
   let newDescription: string | null = null;
+  console.log(`[new] using ${plan.label}${description ? ", description cached" : ""}`);
 
   try {
-    // Step 1 "describe": skipped entirely when a description is cached.
-    if (!description) {
-      const imagePart = await fetchImageAsPart(image.url);
-      const result = await generate({ label: "describe", parts: [imagePart, { text: DESCRIBE_PROMPT }] });
-      description = newDescription = result.text;
+    const [describeStep, ...rest] = plan.steps;
+    const captionStep = rest[rest.length - 1];
+    // Fail before any Gemini call if a step needs a provider bit can't call.
+    for (const step of description ? rest : plan.steps) assertCallable(step);
+
+    // Values for later steps' placeholders; each step adds its own output.
+    const values: Record<string, string> = { ...plan.extras };
+    const run = async (step: (typeof plan.steps)[number], extraParts: Parameters<typeof generate>[0]["parts"] = []) => {
+      let prompt = fillTemplate(step.template, values);
+      const isCaption = step === captionStep;
+      if (isCaption) prompt += appendix(step.template, plan.extras);
+      const result = await generate({
+        label: step.step_name,
+        model: step.model.model_string,
+        parts: [...extraParts, { text: prompt }],
+        responseSchema: isCaption ? CAPTIONS_SCHEMA : undefined,
+      });
       steps.push({
-        step_index: 1,
-        step_name: "describe",
-        prompt: DESCRIBE_PROMPT,
+        step_index: step.step_index,
+        step_name: step.step_name,
+        prompt,
         model: result.model,
         raw_output: result.text,
       });
-    }
+      values[step.step_name] = values.previous = result.text;
+      return result.text;
+    };
 
-    // Step 2 "caption".
-    const prompt = captionPrompt(description);
-    const result = await generate({ label: "caption", parts: [{ text: prompt }], responseSchema: CAPTIONS_SCHEMA });
-    steps.push({
-      step_index: 2,
-      step_name: "caption",
-      prompt,
-      model: result.model,
-      raw_output: result.text,
-    });
-    const captions = parseCaptions(result.text);
+    // First step "describe": gets the image; skipped when a description is cached.
+    if (!description) {
+      description = newDescription = await run(describeStep, [await fetchImageAsPart(image.url)]);
+    } else {
+      values[describeStep.step_name] = values.previous = description;
+    }
+    values.description = description;
+
+    // Middle steps (if any), then the caption step.
+    let raw = "";
+    for (const step of rest) raw = await run(step);
+    const captions = parseCaptions(raw);
 
     const saveStarted = performance.now();
     const { data, error } = await supabase.rpc("save_caption_request", {
