@@ -100,5 +100,7 @@ begin
 end;
 $$;
 
-revoke all on function public.get_caption_chain() from public;
+-- Supabase grants new functions to anon directly, so revoking from public
+-- alone leaves anon able to call it.
+revoke all on function public.get_caption_chain() from public, anon;
 grant execute on function public.get_caption_chain() to authenticated;
