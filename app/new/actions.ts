@@ -222,6 +222,9 @@ export async function generateCaptions(imageId: number): Promise<GenerateResult>
       p_description: newDescription,
       p_steps: steps,
       p_captions: captions,
+      // Record which chain was picked, so the chain tool can report how its
+      // captions actually landed. Null when the built-in fallback ran.
+      p_chain_id: plan.chainId,
     });
 
     if (error) {
